@@ -1,7 +1,7 @@
 Lab 1 - Set Covering
 ====================
 
-The problem is described (here)[https://github.com/squillero/computational-intelligence/blob/master/2022-23/lab1_set-covering.ipynb]
+The problem is described [here](https://github.com/squillero/computational-intelligence/blob/master/2022-23/lab1_set-covering.ipynb)
 
 In this solution is a graph search with both Dijkstra and A star algorithms.
 
@@ -48,4 +48,4 @@ Yanking
 -------
 
 I have yanked lines of code from the professors
-(8 puzzle example)[https://github.com/squillero/computational-intelligence/blob/master/2022-23/lab1_set-covering.ipynb]
+[8 puzzle example](https://github.com/squillero/computational-intelligence/blob/master/2022-23/lab1_set-covering.ipynb)
