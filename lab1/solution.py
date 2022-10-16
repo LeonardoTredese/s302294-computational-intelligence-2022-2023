@@ -102,7 +102,7 @@ def gen_possible_actions(problem_input: list) -> Callable:
         Returns a function that generates all the possible actions
         for problem_input
     """
-    PROBLEM = set(map(lambda x: HashableArray(np.array(x)), problem_input))
+    PROBLEM = sorted(set(map(lambda x: HashableArray(np.array(x)), problem_input)))
     def possible_actions(state: frozenset) -> Generator[int, None, None]:
         """
            Returns a generator that outputs all the possible
