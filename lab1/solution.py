@@ -71,10 +71,6 @@ def search(
                 state_cost[new_state] = state_cost[state] + cost
                 frontier.push(new_state, p=priority_function(new_state))
                 logging.debug(f"Added new node to frontier (cost = {state_cost[new_state]})")
-            if new_state in frontier and state_cost[new_state] > state_cost[state] + cost:
-                old_cost = state_cost[new_state]
-                state_cost[new_state] = state_cost[state] + cost
-                logging.debug(f"Update node cost in frontier: {old_cost} -> {state_cost[new_state]}")
         if frontier:
             state = frontier.pop()
         else:
