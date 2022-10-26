@@ -3,7 +3,7 @@ Solving Rastrigin
 In this sub folder I've used (1, $\lambda$) strategy combined with Self Adaptation
 to maximize the [Rastrigin function](https://en.wikipedia.org/wiki/Rastrigin_function) namely:
 
-$f(\mathbf {x} )=-(An+\sum _{i=1}^{n}\left[x_{i}^{2}-A\cos(2\pi x_{i})\right])$
+$$f(\mathbf {x} )=-(An+\sum _{i=1}^{n}\left[x_{i}^{2}-A\cos(2\pi x_{i})\right])$$
 
 Results
 -------
