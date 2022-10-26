@@ -30,7 +30,7 @@ class SelfAdaptive:
         return self.v
 
 
-def one_comma_lambda(x0, sigma0, lambda_, fitness, epochs, seed=None):
+def one_lambda(x0, sigma0, lambda_, fitness, epochs, seed=None, strategy=','):
     one = SelfAdaptive(x0, sigma0, seed=seed)
     best = one
     population, hist = list(), list()
@@ -38,6 +38,9 @@ def one_comma_lambda(x0, sigma0, lambda_, fitness, epochs, seed=None):
         for _ in range(lambda_):
             new = one.tweak()
             population.append((fitness(new.parameters), new))
+        if strategy in ['plus', '+']:
+            one.step += 1
+            population.append((fitness(one.parameters), one))
         fit, one = max(population)
         if fit > fitness(best.parameters):
             hist.append((one, epoch))
@@ -51,7 +54,7 @@ if __name__ == '__main__':
     x0 = np.full(2, 100)
     sigma0 = np.full(2, 10)
     goal = np.zeros((1,2))
-    best, hist = one_comma_lambda(x0, sigma0, 1000, rastrigin, 10 ** 3, seed=SEED)
+    best, hist = one_lambda(x0, sigma0, 1000, rastrigin, 10 ** 3, seed=SEED, strategy='+')
     print(np.linalg.norm(best.parameters - goal), rastrigin(best.parameters))
     values, epochs = zip(*hist) 
     pos = np.array(list(map(lambda x: x.parameters, values)))
