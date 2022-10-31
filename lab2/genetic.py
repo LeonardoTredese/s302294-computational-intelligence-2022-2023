@@ -1,6 +1,7 @@
 import logging
 import random
 import numpy as np
+import sys
 from collections import namedtuple
 from typing import Callable
 
@@ -34,7 +35,7 @@ def init_population(
     def new_individual():
         genome = rand.choice([True, False], size=problem_size)
         return Individual(genome, fitness(genome))
-    return [ new_individual() for _ in range(population_size) ]
+    return (new_individual() for _ in range(population_size))
 
 def flip_mutation(genome: np.ndarray, rand: np.random.Generator) -> np.ndarray:
     n_flips = rand.poisson(1) + 1
@@ -42,27 +43,20 @@ def flip_mutation(genome: np.ndarray, rand: np.random.Generator) -> np.ndarray:
     genome[flips] = ~genome[flips]
     return genome
 
-def no_mutation(genome: np.ndarray, mock) -> np.ndarray:
-    return genome
-
 def rand_crossover(genome1: np.ndarray, genome2: np.ndarray, rand: np.random.Generator) -> np.ndarray:
-    new_genome = np.full(len(genome1), False)
-    mask = rand.choice([True, False], size = len(new_genome))
-    new_genome[mask] = genome1[mask]
-    new_genome[~mask] = genome2[~mask]
-    return new_genome
+    mask = rand.choice([True, False], size = len(genome1))
+    return np.where(mask, genome1, genome2)
 
-def tournament(population: list, size: int, rand: np.random.Generator) -> Individual:
-    # choice returns a 2d array of objects instead of 1d array of individuals
-    partecipants = rand.choice(population, size = size)
-    return Individual(*max(partecipants, key=lambda i: i[1]))
+def tournament(population: list, size: int) -> Individual:
+    partecipants = (random.choice(population) for _ in range(size))
+    return max(partecipants, key=lambda i: i.fitness)
 
-def create_offspring(population: list, selective_pressure: int, rand: np.random.Generator) -> Individual:
-        parent1 = tournament(population, 15, rand)
-        parent2 = tournament(population, 15, rand)
+def create_offspring(population: list, selective_pressure: int, mutation_rate: float, rand: np.random.Generator) -> Individual:
+        parent1 = tournament(population, selective_pressure)
+        parent2 = tournament(population, selective_pressure)
         genome = rand_crossover(parent1.genome, parent2.genome, rand)
-        mutation = rand.choice([no_mutation, flip_mutation])
-        genome = mutation(genome, rand)
+        if mutation_rate >= rand.random():
+            genome = flip_mutation(genome, rand)
         return Individual(genome, fitness(genome))
 
 N = 500
@@ -71,16 +65,15 @@ P = problem(N, seed = SEED)
 OFFSPRING_SIZE = 20
 random_generator = np.random.default_rng(SEED)
 fitness = gen_fitness(P)
-population = init_population(100, len(P), fitness, random_generator)
+population = list(init_population(100, len(P), fitness, random_generator))
 best_individual = max(population, key=lambda i: i.fitness)
 
 
 for _ in range(10_000):
-    offspring = [create_offspring(population, 15, random_generator) for _ in range(OFFSPRING_SIZE)]
-    best_offspring = max(offspring, key=lambda i: i.fitness)
-    if best_offspring.fitness > best_individual.fitness:
-        best_individual = best_offspring
-        print('\r', _, best_individual, end='')
-    population = sorted(population, key=lambda i: i.fitness)
-    population[:OFFSPRING_SIZE] = offspring
+    offspring = [create_offspring(population, 15, .7, random_generator) for _ in range(OFFSPRING_SIZE)]
+    population = sorted(population + offspring, key=lambda i: i.fitness, reverse=True)[:OFFSPRING_SIZE]
+    if population[0].fitness > best_individual.fitness:
+        best_individual = population[0]
+        print('\repoch', _,'fitness', -best_individual.fitness[1], end='')
+    
  
