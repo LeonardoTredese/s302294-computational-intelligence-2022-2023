@@ -2,7 +2,7 @@ import logging
 import random
 import numpy as np
 import sys
-from collections import namedtuple
+from collections import namedtuple, Counter
 from typing import Callable
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
@@ -25,13 +25,11 @@ def gen_fitness(problem: list) -> Callable:
             The fitness is represented as the tuple:
             (# of distinct elements, minus # of elements)
         """
-        distinct_numbers = set()
-        weight = 0
+        cnt = Counter()
         for set_, gene in zip(problem, genome):
             if gene:
-                distinct_numbers.update(set_)
-                weight += len(set_)
-        return len(distinct_numbers), -weight
+                cnt.update(set_)
+        return len(cnt), -cnt.total()
     return fitness
 
 def init_population(
