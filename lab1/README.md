@@ -1,4 +1,4 @@
-Lab 1 - Set Covering
+Lab 1 - Graph Search
 ====================
 
 The problem is described [here](https://github.com/squillero/computational-intelligence/blob/master/2022-23/lab1_set-covering.ipynb)
