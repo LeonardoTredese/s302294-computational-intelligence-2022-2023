@@ -16,7 +16,13 @@ Individual = namedtuple('Individual', ['genome', 'fitness'])
 
 
 def gen_fitness(problem: list) -> Callable:
+    """ Returns a fitness function based on  the given problem """
     def fitness(genome: np.ndarray) -> tuple:
+        """
+            Evaluates the fitness of a given genome.
+            The fitness is represented as the tuple:
+            (# of distinct elements, minus # of elements)
+        """
         distinct_numbers = set()
         weight = 0
         for set_, gene in zip(problem, genome):
@@ -32,18 +38,24 @@ def init_population(
         fitness: Callable,
         rand: np.random.Generator
     ) -> list:
+    """
+        Creates an initial population of a given size for a specific problem.
+        The genome components are distributed uniformly, and their fitness is evaluated.
+    """
     def new_individual():
         genome = rand.choice([True, False], size=problem_size)
         return Individual(genome, fitness(genome))
     return (new_individual() for _ in range(population_size))
 
 def flip_mutation(genome: np.ndarray, rand: np.random.Generator) -> np.ndarray:
+    """ Flips n random  genes of the genome, where n ~ 1 + Pois(1). """
     n_flips = rand.poisson(1) + 1
     flips = rand.integers(len(genome), size = n_flips)
     genome[flips] = ~genome[flips]
     return genome
 
 def loseweight_mutation(genome: np.ndarray, rand: np.random.Generator) -> np.ndarray:
+    """ Sets at random some of the True genes to False, therefore reducing weight """
     if np.any(genome):
         pos_index = np.arange(len(genome))[genome]
         drops = rand.choice(pos_index, size=rand.integers(len(pos_index)))
@@ -51,18 +63,25 @@ def loseweight_mutation(genome: np.ndarray, rand: np.random.Generator) -> np.nda
     return genome
 
 def rand_crossover(genome1: np.ndarray, genome2: np.ndarray, rand: np.random.Generator) -> np.ndarray:
+    """ For each locus chooses at random if the gene will come from either genome1 or genome2 """
     mask = rand.choice([True, False], size = len(genome1))
     return np.where(mask, genome1, genome2)
 
 def onecut_crossover(genome1: np.ndarray, genome2: np.ndarray, rand: np.random.Generator) -> np.ndarray:
+    """ Vanilla one cut crossover""" 
     split = rand.choice(len(genome1))
     return np.concatenate([genome1[:split], genome2[split:]])
 
 def tournament(population: list, size: int) -> Individual:
+    """ Returns the best individual among 'size' random individuals of the given population """
     partecipants = (random.choice(population) for _ in range(size))
     return max(partecipants, key=lambda i: i.fitness)
 
 def create_offspring(population: list, selective_pressure: int, mutation_rate: float, rand: np.random.Generator) -> Individual:
+        """
+            Given a population it selects two parents using tournament selection and a specified selective pressure.
+            Then randomly applies a mutation to the new offspring.
+        """
         parent1 = tournament(population, selective_pressure)
         parent2 = tournament(population, selective_pressure)
         crossover = rand.choice([rand_crossover, onecut_crossover])
