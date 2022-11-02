@@ -5,6 +5,8 @@ import sys
 from collections import namedtuple
 from typing import Callable
 
+logging.basicConfig(format="%(message)s", level=logging.INFO)
+
 def problem(N: int, seed=None) -> list:
     random.seed(seed)
     return list(sorted({ 
@@ -91,7 +93,7 @@ def create_offspring(population: list, selective_pressure: int, mutation_rate: f
             genome = mutation(genome, rand)
         return Individual(genome, fitness(genome))
 
-N = 500
+N = 1000
 SEED = 42
 P = problem(N, seed = SEED)
 OFFSPRING_SIZE = 20
@@ -101,11 +103,14 @@ population = list(init_population(100, len(P), fitness, random_generator))
 best_individual = max(population, key=lambda i: i.fitness)
 
 
-for _ in range(10_000):
+for generation in range(10_000):
     offspring = [create_offspring(population, 15, .7, random_generator) for _ in range(OFFSPRING_SIZE)]
     population = sorted(population + offspring, key=lambda i: i.fitness, reverse=True)[:OFFSPRING_SIZE]
     if population[0].fitness > best_individual.fitness:
         best_individual = population[0]
-        print('\repoch', _,'fitness', -best_individual.fitness[1], end='')
+        logging.debug(f"\rgeneration {generation} weight {-best_individual.fitness[1]}")
     
- 
+outcome = f"""For problem of size {N}:
+ Found a {"valid" if best_individual.fitness[0] == N else "invalid"} solution
+ with weight {-best_individual.fitness[1]:,}"""
+logging.info(outcome) 
