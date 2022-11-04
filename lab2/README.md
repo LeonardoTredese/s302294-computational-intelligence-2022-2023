@@ -31,3 +31,10 @@ For problem of size 1000:
  Found a valid solution
  with weight 4,048
 ```
+Collaborations
+--------------
+
+I have collaborated with:
+
+- s291871
+- s280117
