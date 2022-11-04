@@ -92,9 +92,7 @@ def create_offspring(population: list, selective_pressure: int, mutation_rate: f
         return Individual(genome, fitness(genome))
 
 def mutate_population(population: list, mutation_rate: float, fitness: Callable, rand: np.random.Generator) -> Generator:
-    """
-        Mutate the individuals in the population with a chance equalt to the mutation rate
-    """
+    """ Mutate the individuals in the population with a chance equalt to the mutation rate """
     def random_mutation(ind: Individual) -> Individual:
         if mutation_rate >= rand.random():
             mutation = rand.choice([flip_mutation, loseweight_mutation])
@@ -103,25 +101,28 @@ def mutate_population(population: list, mutation_rate: float, fitness: Callable,
         return ind
     return (random_mutation(i) for i in population)
 
-N = 1000
-SEED = 42
-P = problem(N, seed = SEED)
-OFFSPRING_SIZE = 20
-random_generator = np.random.default_rng(SEED)
-fitness = gen_fitness(P)
-population = list(init_population(50, len(P), fitness, random_generator))
-best_individual = max(population, key=lambda i: i.fitness)
+def run_generations(population: list, n_generations: int, offspring_size: int, mutation_rate: float, selective_pressure: int) -> list: 
+    """ Pergorm the genetic algorithm with strategy one for n_generations with the given parameters"""
+    best_individual = max(population, key=lambda i: i.fitness)
+    for generation in range(n_generations):
+        population = list(mutate_population(population, mutation_rate, fitness, random_generator))
+        offspring = [create_offspring(population, selective_pressure, mutation_rate, fitness, random_generator) for _ in range(offspring_size)]
+        population = sorted(population + offspring, key=lambda i: i.fitness, reverse=True)[:offspring_size]
+        if population[0].fitness > best_individual.fitness:
+            best_individual = population[0]
+            logging.debug(f"\rgeneration {generation} weight {-best_individual.fitness[1]}")
+    return population, best_individual
 
-
-for generation in range(1000):
-    population = list(mutate_population(population, .7, fitness, random_generator))
-    offspring = [create_offspring(population, 15, .7, fitness, random_generator) for _ in range(OFFSPRING_SIZE)]
-    population = sorted(population + offspring, key=lambda i: i.fitness, reverse=True)[:OFFSPRING_SIZE]
-    if population[0].fitness > best_individual.fitness:
-        best_individual = population[0]
-        logging.debug(f"\rgeneration {generation} weight {-best_individual.fitness[1]}")
+for N in [5, 10, 20, 100, 500, 1000]:
+    SEED = 42
+    P = problem(N, seed = SEED)
+    random_generator = np.random.default_rng(SEED)
+    fitness = gen_fitness(P)
+    population = list(init_population(50, len(P), fitness, random_generator))
     
-outcome = f"""For problem of size {N}:
- Found a {"valid" if best_individual.fitness[0] == N else "invalid"} solution
- with weight {-best_individual.fitness[1]:,}"""
-logging.info(outcome) 
+    population, best_individual = run_generations(population, 1000, 20, .8, 15) 
+        
+    outcome = f"""For problem of size {N}:
+     Found a {"valid" if best_individual.fitness[0] == N else "invalid"} solution
+     with weight {-best_individual.fitness[1]:,}"""
+    logging.info(outcome) 
