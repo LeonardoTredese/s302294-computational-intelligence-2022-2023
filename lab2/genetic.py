@@ -3,7 +3,7 @@ import random
 import numpy as np
 import sys
 from collections import namedtuple, Counter
-from typing import Callable
+from typing import Callable, Generator
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 
@@ -37,7 +37,7 @@ def init_population(
         problem_size: int,
         fitness: Callable,
         rand: np.random.Generator
-    ) -> list:
+    ) -> Generator:
     """
         Creates an initial population of a given size for a specific problem.
         The genome components are distributed uniformly, and their fitness is evaluated.
@@ -77,7 +77,7 @@ def tournament(population: list, size: int) -> Individual:
     partecipants = (random.choice(population) for _ in range(size))
     return max(partecipants, key=lambda i: i.fitness)
 
-def create_offspring(population: list, selective_pressure: int, mutation_rate: float, rand: np.random.Generator) -> Individual:
+def create_offspring(population: list, selective_pressure: int, mutation_rate: float, fitness: Callable, rand: np.random.Generator) -> Individual:
         """
             Given a population it selects two parents using tournament selection and a specified selective pressure.
             Then randomly applies a mutation to the new offspring.
@@ -91,18 +91,31 @@ def create_offspring(population: list, selective_pressure: int, mutation_rate: f
             genome = mutation(genome, rand)
         return Individual(genome, fitness(genome))
 
+def mutate_population(population: list, mutation_rate: float, fitness: Callable, rand: np.random.Generator) -> Generator:
+    """
+        Mutate the individuals in the population with a chance equalt to the mutation rate
+    """
+    def random_mutation(ind: Individual) -> Individual:
+        if mutation_rate >= rand.random():
+            mutation = rand.choice([flip_mutation, loseweight_mutation])
+            genome = mutation(ind.genome, rand)
+            ind = Individual(genome, fitness(genome))
+        return ind
+    return (random_mutation(i) for i in population)
+
 N = 1000
 SEED = 42
 P = problem(N, seed = SEED)
 OFFSPRING_SIZE = 20
 random_generator = np.random.default_rng(SEED)
 fitness = gen_fitness(P)
-population = list(init_population(100, len(P), fitness, random_generator))
+population = list(init_population(50, len(P), fitness, random_generator))
 best_individual = max(population, key=lambda i: i.fitness)
 
 
-for generation in range(10_000):
-    offspring = [create_offspring(population, 15, .7, random_generator) for _ in range(OFFSPRING_SIZE)]
+for generation in range(1000):
+    population = list(mutate_population(population, .7, fitness, random_generator))
+    offspring = [create_offspring(population, 15, .7, fitness, random_generator) for _ in range(OFFSPRING_SIZE)]
     population = sorted(population + offspring, key=lambda i: i.fitness, reverse=True)[:OFFSPRING_SIZE]
     if population[0].fitness > best_individual.fitness:
         best_individual = population[0]
