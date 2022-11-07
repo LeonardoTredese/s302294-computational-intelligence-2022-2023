@@ -6,30 +6,40 @@ The problem is described [here](https://github.com/squillero/computational-intel
 I adopted Strategy 1, with tournaments for parent selection and acceptance with penalty for infeasible solutions.
 I used 2 types of mutations and 2 types of crossovers.
 
-Population size is set to 100, offspring size is set to 20, mutation rate is set to 0.7 and tournament
-size is set to 15.
+Population size is set to 20, offspring size is set to 20, mutation rate is set to 0.8 and tournament
+size is set to 15, maximum number of generations is set to 1000.
 
 The results are the following
 
 ```
 For problem of size 5:
- Found a valid solution
- with weight 5
+     Found a valid solution
+     with weight 5
+     in 3 seconds
 For problem of size 10:
- Found a valid solution
- with weight 10
+     Found a valid solution
+     with weight 10
+     in 3 seconds
 For problem of size 20:
- Found a valid solution
- with weight 23
+     Found a valid solution
+     with weight 24
+     in 3 seconds
 For problem of size 100:
- Found a valid solution
- with weight 208
+     Found a valid solution
+     with weight 204
+     in 4 seconds
 For problem of size 500:
- Found a valid solution
- with weight 1,564
+     Found a valid solution
+     with weight 1,516
+     in 7 seconds
 For problem of size 1000:
- Found a valid solution
- with weight 4,048
+     Found a valid solution
+     with weight 3,748
+     in 14 seconds
+For problem of size 10000:
+     Found a valid solution
+     with weight 58,058
+     in 200 seconds
 ```
 Collaborations
 --------------
