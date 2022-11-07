@@ -123,14 +123,14 @@ def run_generations(population: list, n_generations: int, offspring_size: int, m
             logging.debug(f"\rgeneration {generation} weight {-best_individual.fitness[1]}")
     return population, best_individual
 
-for N in [5, 10, 20, 100, 500, 1_000, 10_000]:
+for N in [5, 10, 20, 100, 500, 1_000, 10_000, 100_000]:
     SEED = 42
     P = problem(N, seed = SEED)
     random_generator = np.random.default_rng(SEED)
     fitness = gen_fitness(P)
     population = list(init_population(20, len(P), fitness, random_generator))
     start = time()
-    population, best_individual = run_generations(population, 2000, 20, .8, 15) 
+    population, best_individual = run_generations(population, 1000, 20, .8, 15) 
     end = time()
         
     outcome = f"""For problem of size {N}:
