@@ -4,31 +4,30 @@ import numpy as np
 import sys
 from collections import namedtuple, Counter
 from typing import Callable, Generator
-
+from time import time 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 
-def problem(N: int, seed=None) -> list:
+def problem(N: int, seed=None) -> np.ndarray:
     random.seed(seed)
-    return list(sorted({ 
+    return np.array(sorted({ 
         tuple(set(random.randint(0, N - 1) for n in range(random.randint(N // 5, N // 2))))
         for n in range(random.randint(N, N * 5))
-    }))
+    }), dtype=object)
 
+Genome = namedtuple('Genome', ['loci', 'len']) 
 Individual = namedtuple('Individual', ['genome', 'fitness']) 
 
-
-def gen_fitness(problem: list) -> Callable:
+def gen_fitness(problem: np.ndarray) -> Callable:
     """ Returns a fitness function based on  the given problem """
-    def fitness(genome: np.ndarray) -> tuple:
+    def fitness(genome: Genome) -> tuple:
         """
             Evaluates the fitness of a given genome.
             The fitness is represented as the tuple:
             (# of distinct elements, minus # of elements)
         """
         cnt = Counter()
-        for set_, gene in zip(problem, genome):
-            if gene:
-                cnt.update(set_)
+        for locus in genome.loci:
+            cnt.update(problem[locus])
         return len(cnt), -cnt.total()
     return fitness
 
@@ -43,34 +42,45 @@ def init_population(
         The genome components are distributed uniformly, and their fitness is evaluated.
     """
     def new_individual():
-        genome = rand.choice([True, False], size=problem_size)
+        positive_genes = rand.integers(problem_size + 1)
+        genome = Genome(set(rand.integers(problem_size, size = positive_genes)), problem_size)
         return Individual(genome, fitness(genome))
     return (new_individual() for _ in range(population_size))
 
-def flip_mutation(genome: np.ndarray, rand: np.random.Generator) -> np.ndarray:
+def flip_mutation(genome: Genome, rand: np.random.Generator) -> Genome:
     """ Flips n random  genes of the genome, where n ~ 1 + Pois(1). """
     n_flips = rand.poisson(1) + 1
-    flips = rand.integers(len(genome), size = n_flips)
-    genome[flips] = ~genome[flips]
+    for locus in rand.integers(genome.len, size = n_flips):
+        if locus in genome.loci:
+            genome.loci.remove(locus)
+        else:
+            genome.loci.add(locus)
     return genome
 
-def loseweight_mutation(genome: np.ndarray, rand: np.random.Generator) -> np.ndarray:
-    """ Sets at random some of the True genes to False, therefore reducing weight """
-    if np.any(genome):
-        pos_index = np.arange(len(genome))[genome]
-        drops = rand.choice(pos_index, size=rand.integers(len(pos_index)))
-        genome[drops] = False
+def loseweight_mutation(genome: Genome, rand: np.random.Generator) -> Genome:
+    """ Remove some positive genes """
+    if genome.loci:
+        max_drops = len(genome.loci)
+        drops = set(rand.choice(list(genome.loci), size=rand.integers(max_drops)))
+        new_loci = genome.loci - drops
+        genome = Genome(new_loci, genome.len)
     return genome
 
-def rand_crossover(genome1: np.ndarray, genome2: np.ndarray, rand: np.random.Generator) -> np.ndarray:
+def rand_crossover(genome1: Genome, genome2: Genome, rand: np.random.Generator) -> Genome:
     """ For each locus chooses at random if the gene will come from either genome1 or genome2 """
-    mask = rand.choice([True, False], size = len(genome1))
-    return np.where(mask, genome1, genome2)
+    new_loci = set()
+    for locus in sorted(genome1.loci | genome2.loci):
+        parent = random.choice([genome1, genome2])
+        if locus in parent.loci:
+            new_loci.add(locus)
+    return Genome(new_loci, genome1.len) 
 
-def onecut_crossover(genome1: np.ndarray, genome2: np.ndarray, rand: np.random.Generator) -> np.ndarray:
+def onecut_crossover(genome1: Genome, genome2: Genome, rand: np.random.Generator) -> Genome:
     """ Vanilla one cut crossover""" 
-    split = rand.choice(len(genome1))
-    return np.concatenate([genome1[:split], genome2[split:]])
+    split = rand.choice(genome1.len)
+    g1 = {locus for locus in genome1.loci if locus < split}
+    g2 = {locus for locus in genome2.loci if locus >= split}
+    return Genome(g1 | g2, genome1.len) 
 
 def tournament(population: list, size: int) -> Individual:
     """ Returns the best individual among 'size' random individuals of the given population """
@@ -113,16 +123,18 @@ def run_generations(population: list, n_generations: int, offspring_size: int, m
             logging.debug(f"\rgeneration {generation} weight {-best_individual.fitness[1]}")
     return population, best_individual
 
-for N in [5, 10, 20, 100, 500, 1000]:
+for N in [5, 10, 20, 100, 500, 1_000, 10_000]:
     SEED = 42
     P = problem(N, seed = SEED)
     random_generator = np.random.default_rng(SEED)
     fitness = gen_fitness(P)
-    population = list(init_population(50, len(P), fitness, random_generator))
-    
-    population, best_individual = run_generations(population, 1000, 20, .8, 15) 
+    population = list(init_population(20, len(P), fitness, random_generator))
+    start = time()
+    population, best_individual = run_generations(population, 2000, 20, .8, 15) 
+    end = time()
         
     outcome = f"""For problem of size {N}:
      Found a {"valid" if best_individual.fitness[0] == N else "invalid"} solution
-     with weight {-best_individual.fitness[1]:,}"""
+     with weight {-best_individual.fitness[1]:,}
+     in {end - start:.0f} seconds"""
     logging.info(outcome) 
