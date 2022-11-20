@@ -115,8 +115,8 @@ def run_generations(population: list, n_generations: int, offspring_size: int, m
     """ Pergorm the genetic algorithm with strategy one for n_generations with the given parameters"""
     best_individual = max(population, key=lambda i: i.fitness)
     for generation in range(n_generations):
-        population = list(mutate_population(population, mutation_rate, fitness, random_generator))
         offspring = [create_offspring(population, selective_pressure, mutation_rate, fitness, random_generator) for _ in range(offspring_size)]
+        population = list(mutate_population(population, mutation_rate, fitness, random_generator))
         population = sorted(population + offspring, key=lambda i: i.fitness, reverse=True)[:offspring_size]
         if population[0].fitness > best_individual.fitness:
             best_individual = population[0]
