@@ -28,19 +28,22 @@ class Nim:
 
 
 class Duel:
-    def __init__(self, game: Nim, player0: Callable, player1: Callable) -> None:
+    def __init__(self, game: Nim, player0: Callable, player1: Callable, visible: bool = False) -> None:
         self._game = game
         self._players  = [player0, player1]
         self._turn = 0
+        self._visible = visible
 
     def play(self) -> int:
         while self._game:
             player = self._players[self._turn]
-            logging.debug(f"Player {player.__name__} turn")
-            logging.debug(self._game)
+            if self._visible:
+                logging.debug(f"Player {player.__name__} turn")
+                logging.debug(self._game)
             ply = player(self._game)
             self._game.nimming(ply)
             self._turn = 1 - self._turn
-        logging.debug(f"Player {player.__name__} won")
+        if self._visible:
+            logging.debug(f"Player {player.__name__} won")
         return 1 - self._turn 
 

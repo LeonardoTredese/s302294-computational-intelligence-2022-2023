@@ -42,6 +42,14 @@ def random_ply(game: Nim) -> Nimply:
     n_objects = random.randint(1, game.rows[row])
     return Nimply(row, n_objects)
 
+def hardcoded_ply(game: Nim) -> Nimply:
+    non_null_rows = [(elems, i) for i, elems in enumerate(game.rows) if elems]
+    if len(non_null_rows) == 2:
+        elems, row = max(non_null_rows)
+        return Nimply(row, elems - 1) if elems > 1 else Nimply(row, elems - 1)
+    else:
+        return random_ply(game)
+
 class AdaptiveRule:
     def __init__(self, params: SelfAdaptiveParameters , row: int) -> None:
         self._weight = params[0]
@@ -64,10 +72,10 @@ class AdaptiveRule:
         return Nimply(self._row, min(max(objects, 1), row_elems))
 
 class AdaptivePlayer:
-    def __init__(self, n_rows: int, rules: list = None) -> None:
+    def __init__(self, n_rows: int, rules: list = None, n_rules: int = 10) -> None:
         self.__name__ = "AdaptivePlayer"
         if rules is None:
-            rules_init = ((SelfAdaptiveParameters(10 * np.random.random(3), 10 * np.random.random(3)), row) for row in range(n_rows) for _ in range(10))
+            rules_init = ((SelfAdaptiveParameters(10 * np.random.random(3), 10 * np.random.random(3)), row) for row in range(n_rows) for _ in range(n_rules))
             self._rules = [AdaptiveRule(*ri) for ri in rules_init]
         else:
             self._rules = rules
@@ -80,6 +88,4 @@ class AdaptivePlayer:
     def __call__(self, game: Nim) -> Nimply:
         rule = max(self._rules, key= lambda r: r.activation(game)) 
         return rule.action(game)
-            
-        
             

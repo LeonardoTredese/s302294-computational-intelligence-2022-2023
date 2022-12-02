@@ -1,3 +1,4 @@
+import random
 import numpy as np
 from typing import Callable
 from itertools import chain
@@ -21,19 +22,23 @@ class SelfAdaptiveParameters:
     def __getitem__(self, key: int) -> float:
         return self._v[key]
 
-def one_lambda(initial, lambda_, fitness, epochs, seed=None) -> tuple:
+def one_lambda(initial: object, lambda_: int, evaluator: Callable, epochs: int) -> tuple:
     one = initial
     best = one
-    population, hist = list(), list()
+    fit_best = None
+    hist = list()
     for epoch in range(epochs):
         tweaked = (one.tweak() for _ in range(lambda_))
-        fit, one = max(((fitness(i), i) for i in tweaked), key=lambda x: x[0])        
+        fit, one = evaluator(tweaked) 
         hist.append(fit)
-        if fit > fitness(best):
+        if fit_best is None or fit > fit_best:
             best = one
-        population.clear()
+            fit_best = fit
     return best, hist
 
+def lexicase_nim_fitness(individual: Callable, adversaries: list[Callable] = list(), rows: int = 3, n_games: list[int] = list()):
+    return tuple((nim_fitness(individual, adversary, rows=rows, n_games=games) for adversary, games in zip(adversaries, n_games)))
+        
 def nim_fitness(individual: Callable, adversary: Callable, rows: int = 3,  n_games: int = 100) -> float:
     wins = 0
     for game_id in range(n_games):
@@ -46,3 +51,17 @@ def nim_fitness(individual: Callable, adversary: Callable, rows: int = 3,  n_gam
             wins += 1 - duel.play()
     return wins / n_games
     
+def lexicase_evaluator(population, fitness: Callable = lexicase_nim_fitness, fit_dimensions: int = 1) -> tuple:
+    evaluated = ((fitness(i), i) for i in population)
+    random_order = random.sample(range(fit_dimensions), fit_dimensions)
+    fitness_sort = lambda f: tuple((f[i] for i in random_order))
+    return max(evaluated, key = lambda e: fitness_sort(e[0]))
+
+def fitness_hole_evaluator(population, fitness: Callable = lexicase_nim_fitness, fit_dimensions: int = 1) -> tuple:
+    evaluated = ((fitness(i), i) for i in population)
+    i = random.randrange(fit_dimensions)
+    return max(evaluated, key = lambda e: e[0][i])
+
+def basic_evaluator(population, fitness: Callable = nim_fitness) -> tuple:
+    return max(((fitness(i), i) for i in population), key = lambda e: e[0])
+
