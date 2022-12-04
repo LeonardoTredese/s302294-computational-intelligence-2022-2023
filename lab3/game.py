@@ -1,4 +1,3 @@
-import random 
 import logging
 from collections import namedtuple
 from typing import Callable
@@ -13,7 +12,7 @@ class Nim:
         assert self._rows[ply.row] >= ply.num_objects
         self._rows[ply.row] -= ply.num_objects
     
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return sum(self._rows) > 0
 
     @property
@@ -34,16 +33,20 @@ class Duel:
         self._turn = 0
         self._visible = visible
 
+    def log(self, message: str) -> None:
+        if self._visible:
+            logging.info(message)
+        else:
+            logging.debug(message)
+
     def play(self) -> int:
         while self._game:
             player = self._players[self._turn]
-            if self._visible:
-                logging.debug(f"Player {player.__name__} turn")
-                logging.debug(self._game)
+            self.log(f"Player {player.__name__} turn")
+            self.log(self._game)
             ply = player(self._game)
             self._game.nimming(ply)
             self._turn = 1 - self._turn
-        if self._visible:
-            logging.debug(f"Player {player.__name__} won")
+        self.log(f"Player {player.__name__} won")
         return 1 - self._turn 
 

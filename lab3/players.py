@@ -1,16 +1,14 @@
 import random
 import logging
 import numpy as np
-from functools import reduce
+from functools import reduce, partial
+from typing import Callable
 from operator import xor
 from game import Nim, Nimply
 from evolved_agents import SelfAdaptiveParameters
 
-def dumb_ply(game: Nim) -> Nimply:
-    n_objects, idx = max((o, r) for r, o in enumerate(game.rows))
-    return Nimply(idx, n_objects)
-
 def good_ply(game: Nim) -> Nimply:
+    """ Faulty nim-sum implementation, takes nim-sum to zero only if it can remove a whole row  """
     nim_sum = reduce(xor, game.rows)
     if nim_sum:
         n_objects, row = max(((o & nim_sum, r) for r, o in enumerate(game.rows)))
@@ -20,6 +18,7 @@ def good_ply(game: Nim) -> Nimply:
     return Nimply(row, n_objects)
 
 def top_ply(game: Nim) -> Nimply:
+    """ nim-sum strategy """
     sum_zero_ply = None
     nim_sum = reduce(xor, game.rows)
     row, objects = next(((r, o - xor(o, nim_sum)) for r, o in enumerate(game.rows) if xor(o, nim_sum) < o), (None, None))
@@ -28,64 +27,88 @@ def top_ply(game: Nim) -> Nimply:
         objects = 1
     return Nimply(row, objects)
 
-def terrible_ply(game: Nim) -> Nimply:
-    best_ply = top_ply(game)
-    elems = game.rows[best_ply.row]
-    return Nimply(best_ply.row, min(best_ply.num_objects + 1, elems))
-
 def human_ply(game: Nim) -> Nimply:
-    row, num_objects = input("Insert move: ").split()
-    return Nimply(int(row), int(num_objects))
+    """ Get ply from standard input """ 
+    row, objects = input("Insert row and objects: ").split()
+    return Nimply(int(row), int(objects))
 
 def random_ply(game: Nim) -> Nimply:
     row = random.choice([i for i, o in enumerate(game.rows) if o])
     n_objects = random.randint(1, game.rows[row])
     return Nimply(row, n_objects)
 
-def hardcoded_ply(game: Nim) -> Nimply:
+def hardcoded_ply(game: Nim, default_ply: Callable = random_ply) -> Nimply:
+    """ Try to apply a hardcoded behaviour otherwise use a default ply """ 
     non_null_rows = [(elems, i) for i, elems in enumerate(game.rows) if elems]
-    if len(non_null_rows) == 2:
-        elems, row = max(non_null_rows)
-        return Nimply(row, elems - 1) if elems > 1 else Nimply(row, elems - 1)
+    if len(non_null_rows) == 1:
+        elems, row = non_null_rows[0]
+        return Nimply(row, elems)
+    elif len(non_null_rows) == 2:
+        max_elems, row = max(non_null_rows)
+        min_elems, _ = min(non_null_rows)
+        return Nimply(row, 1) if max_elems == min_elems else Nimply(row, max_elems - min_elems)
+    elif sum(1 for e, _ in non_null_rows if e == 1) == len(non_null_rows) - 1:
+        max_elems, row = max(non_null_rows)
+        elems = max_elems if len(non_null_rows) % 2 else max_elems - 1
+        return Nimply(row, elems)
     else:
-        return random_ply(game)
+        return default_ply(game)
 
 class AdaptiveRule:
-    def __init__(self, params: SelfAdaptiveParameters , row: int) -> None:
-        self._weight = params[0]
-        self._bias = params[1]
-        self._objects = params[2]
-        self._params = params
+    """ Generic parametric rule """
+    def __init__(self, row: int, params: SelfAdaptiveParameters = None) -> None:
+        if params is None:
+            n_params = 2 + 2*row+1
+            self._params = SelfAdaptiveParameters(np.random.random(n_params), np.full(n_params, 1))
+        else:
+            self._params = params
+        self._weight = self._params[0]
+        self._bias = self._params[1]
+        self._objects = self._params[2:]
         self._row = row
    
     def tweak(self):
-        new_params = self._params.tweak()
-        return AdaptiveRule(new_params, self._row)    
+        return AdaptiveRule(self._row, params = self._params.tweak())    
 
-    def activation(self, game: Nim) -> float:
+    def activation(self, game: Nim) -> tuple:
+        """ Given a game returns a tuple inicating if its valid and its activation value """
         row_elems = game.rows[self._row]
-        return int(row_elems > 0) * max(self._weight * row_elems + self._bias, 0)
+        return row_elems > 0,  max(self._weight * row_elems + self._bias, 0)
 
     def action(self, game: Nim) -> Nimply:
         row_elems = game.rows[self._row]
-        objects = round(self._objects)
-        return Nimply(self._row, min(max(objects, 1), row_elems))
+        objects = int(1 + np.argmax(self._objects[:row_elems]))
+        return Nimply(self._row, objects)
 
-class AdaptivePlayer:
-    def __init__(self, n_rows: int, rules: list = None, n_rules: int = 10) -> None:
-        self.__name__ = "AdaptivePlayer"
+class AdaptivePly:
+    """ Ply using only adaptive rules """
+    def __init__(self, n_rows: int, rules: list = None) -> None:
+        self.__name__ = "adaptive_ply"
         if rules is None:
-            rules_init = ((SelfAdaptiveParameters(10 * np.random.random(3), 10 * np.random.random(3)), row) for row in range(n_rows) for _ in range(n_rules))
-            self._rules = [AdaptiveRule(*ri) for ri in rules_init]
+            self._rules = [AdaptiveRule(row) for row in range(n_rows) for _ in range(row + 1)]
         else:
             self._rules = rules
         self._n_rows = n_rows
 
     def tweak(self):
         new_rules = [rule.tweak() for rule in self._rules]
-        return AdaptivePlayer(self._n_rows, rules=new_rules)
+        return AdaptivePly(self._n_rows, rules=new_rules)
 
     def __call__(self, game: Nim) -> Nimply:
-        rule = max(self._rules, key= lambda r: r.activation(game)) 
+        _, rule = max(((r.activation(game), r) for r in self._rules), key = lambda r: r[0])
         return rule.action(game)
-            
+
+class HybridPly:
+    """ Ply using if possible hardcoded rules otherwise adaptive rules """
+    def __init__(self, n_rows: int, algoritmic_ply: Callable, adaptive_ply: AdaptivePly = None) -> None:
+        self.__name__ = "hybrid_ply"
+        self._adaptive_ply = AdaptivePly(n_rows) if adaptive_ply is None else adaptive_ply
+        self._algoritmic_ply = algoritmic_ply 
+        self._ply = partial(algoritmic_ply, default_ply = self._adaptive_ply)
+        self._num_rows = n_rows
+
+    def tweak(self):
+        return HybridPly(self._num_rows, self._algoritmic_ply, adaptive_ply = self._adaptive_ply.tweak())
+    
+    def __call__(self, game: Nim) -> Nimply:
+        return self._ply(game) 
