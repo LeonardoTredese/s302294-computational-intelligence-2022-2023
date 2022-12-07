@@ -1,5 +1,6 @@
 import logging
 from collections import namedtuple
+from typing import Generator
 from functools import cache
 from game import Nim, Nimply, Duel
 from players import top_ply, human_ply
@@ -22,9 +23,18 @@ class NimNode:
         next_rows = tuple(sorted((o for o in next_rows if o)))
         next_game._rows = next_rows
         return next_game
-    
+
+    def possible_plies(self) -> Generator:
+        return (Nimply(r, o) for r, m in enumerate(self._rows) for o in range(1, m+1))
+
     def __bool__(self) -> bool:
         return sum(self._rows) > 0
+
+    def __hash__(self) -> int:
+        return self._rows.__hash__()
+
+    def __eq__(self, other) -> bool:
+        return self._rows == other.rows 
 
     @property
     def rows(self) -> tuple:
@@ -36,11 +46,14 @@ class NimNode:
             out += f"{i} {row * '*'}\n"
         return out
 
+    def __repr__(self) -> str:
+        return "NimNode" + str(self._rows) 
+
 @cache
 def nim_min_max(node: NimNode, turn: str = 'min') -> int:
     if not node:
         return (-1, None) if turn == 'max' else (1, None) 
-    moves = sorted((Nimply(r, o) for r, m in enumerate(node.rows) for o in range(1, m+1)), key=lambda x: x.num_objects, reverse=True)
+    moves = sorted(node.possible_plies(), key=lambda x: x.num_objects, reverse=True)
     outcomes = ((nim_min_max(node.nimming(move), 'min' if turn=='max' else 'max'), move) for move in moves)
     for (next_outcome, prev_move), move in outcomes:
         if turn == 'max' and next_outcome == 1:
@@ -49,16 +62,17 @@ def nim_min_max(node: NimNode, turn: str = 'min') -> int:
             return -1, move
     return (-1, move) if turn == 'max' else (1, move)
 
-def minmax_ply(game: Nim) -> Nimply:
-    # deal with compact notation
+def game_node_mapping(game: Nim) -> list:
     game_node_map = sorted(((o, i) for i, o in enumerate(game.rows) if o))
     _, row_map = zip(*game_node_map)
+    return row_map
+
+def minmax_ply(game: Nim) -> Nimply:
+    row_map = game_node_mapping(game)
     _, ply = nim_min_max(NimNode(game=game), 'min')
     return Nimply(row_map[ply.row], ply.num_objects)
 
-game = Nim(4)
-# Games starts with nim sum 0 so top_ply cannot win against minmax_ply
-Duel(game, top_ply, minmax_ply, visible=True).play()
-
-game = Nim(4)
-Duel(game, minmax_ply, human_ply, visible=True).play()
+if __name__ == '__main__':
+    game = Nim(6)
+    # Games starts with nim sum 0 so top_ply cannot win against minmax_ply
+    Duel(game, minmax_ply, top_ply, visible=True).play()
