@@ -14,7 +14,7 @@ class NimRLAgent:
         self._weight = alpha
         self._discount = gamma
         self._explore_rate = explore_rate
-        self._state_action_reward = defaultdict(random.random)
+        self._quality = defaultdict(random.random)
         self._training = True
 
     def __call__(self, game: Nim) -> Nimply:
@@ -24,23 +24,21 @@ class NimRLAgent:
         if self._explore_rate >= random.random() and self._training:
             ply = random.choice(list(possible_plies))
         else:
-            ply = max(possible_plies, key = lambda p: self._state_action_reward[(state, p)])
+            ply = max(possible_plies, key = lambda p: self._quality[(state, p)])
         if self._training:
             self._history.append((state, ply))
         return Nimply(row_map[ply.row], ply.num_objects)
     
     def learn(self, has_won: bool) -> None:
-        for i, s_p in enumerate(reversed(self._history)):
-            state, ply = s_p
+        for state, ply in reversed(self._history):
             next_state = state.nimming(ply)
-            curr_quality = self._state_action_reward[s_p]
+            curr_quality = self._quality[state, ply]
             reward = 1 if has_won else -1
             if next_state:
-                next_quality = max(map(lambda p: self._state_action_reward[(next_state, p)], next_state.possible_plies()))
+                next_quality = max(map(lambda p: self._quality[next_state, p], next_state.possible_plies()))
             else:
                 next_quality = 1
-            update =  (1 - self._weight)*curr_quality + self._weight*(reward + self._discount*next_quality)
-            self._state_action_reward[s_p] = update
+            self._quality[state, ply] =  (1 - self._weight)*curr_quality + self._weight*(reward + self._discount*next_quality)
         self._history.clear()
         self._explore_rate -= 1e-5
 
@@ -70,7 +68,8 @@ if __name__ == '__main__':
     from players import random_ply, hardcoded_ply, human_ply
     rows = 4
     agent_ply = Trainer(rows, hardcoded_ply).train(10_000)
-    print(nim_fitness(agent_ply, adversary = random_ply, rows=rows, n_games = 1000))
+    print("Against hardcoded_ply", nim_fitness(agent_ply, adversary = hardcoded_ply, rows=rows, n_games = 1000))
+    print("Against random_ply", nim_fitness(agent_ply, adversary = random_ply, rows=rows, n_games = 1000))
     Duel(Nim(4), agent_ply, human_ply, visible=True).play()
   
 
