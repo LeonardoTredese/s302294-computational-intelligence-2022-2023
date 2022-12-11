@@ -14,6 +14,12 @@ then run the interactive script to test the evolved agent and follow the instruc
 python test.py
 ```
 
+To run the minmax agent launch
+
+```
+python minmax.py
+```
+
 To run the RL agent launch
 
 ```

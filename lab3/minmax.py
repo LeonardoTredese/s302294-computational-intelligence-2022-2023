@@ -73,6 +73,5 @@ def minmax_ply(game: Nim) -> Nimply:
     return Nimply(row_map[ply.row], ply.num_objects)
 
 if __name__ == '__main__':
-    game = Nim(6)
-    # Games starts with nim sum 0 so top_ply cannot win against minmax_ply
+    game = Nim(5)
     Duel(game, minmax_ply, top_ply, visible=True).play()
