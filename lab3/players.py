@@ -58,13 +58,14 @@ class AdaptiveRule:
     """ Generic parametric rule """
     def __init__(self, row: int, params: SelfAdaptiveParameters = None) -> None:
         if params is None:
-            n_params = 2 + 2*row+1
+            n_params = 4
             self._params = SelfAdaptiveParameters(np.random.random(n_params), np.full(n_params, 1))
         else:
             self._params = params
-        self._weight = self._params[0]
-        self._bias = self._params[1]
-        self._objects = self._params[2:]
+        self._max = float(self._params[0])
+        self._min = float(self._params[1])
+        self._priority = float(self._params[2])
+        self._objects = round(self._params[3])
         self._row = row
    
     def tweak(self):
@@ -73,11 +74,11 @@ class AdaptiveRule:
     def activation(self, game: Nim) -> tuple:
         """ Given a game returns a tuple inicating if its valid and its activation value """
         row_elems = game.rows[self._row]
-        return row_elems > 0,  max(self._weight * row_elems + self._bias, 0)
+        return row_elems > 0 and self._min < row_elems < self._max,  self._priority
 
     def action(self, game: Nim) -> Nimply:
         row_elems = game.rows[self._row]
-        objects = int(1 + np.argmax(self._objects[:row_elems]))
+        objects = min(max(1, self._objects), row_elems)
         return Nimply(self._row, objects)
 
 class AdaptivePly:
