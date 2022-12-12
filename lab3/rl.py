@@ -65,11 +65,12 @@ class Trainer:
 if __name__ == '__main__':
     import numpy as np
     from evolved_agents import nim_fitness
-    from players import random_ply, hardcoded_ply, human_ply
+    from players import random_ply, hardcoded_ply, human_ply, good_ply
     rows = 4
     agent_ply = Trainer(rows, hardcoded_ply).train(10_000)
     print("Against hardcoded_ply", nim_fitness(agent_ply, adversary = hardcoded_ply, rows=rows, n_games = 1000))
     print("Against random_ply", nim_fitness(agent_ply, adversary = random_ply, rows=rows, n_games = 1000))
+    print("Against good_ply", nim_fitness(agent_ply, adversary = good_ply, rows=rows, n_games = 1000))
     Duel(Nim(4), agent_ply, human_ply, visible=True).play()
   
 
