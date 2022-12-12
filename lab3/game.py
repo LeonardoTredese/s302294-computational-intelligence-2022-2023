@@ -22,7 +22,7 @@ class Nim:
     def __str__(self) -> str:
         out = ""
         for i, row in enumerate(self._rows):
-            out += f"{i} {row * '*'}\n"
+            out += f"{i} {(len(self._rows) - i) * ' '} {row * '*'}\n"
         return out
 
 
