@@ -2,7 +2,7 @@ import random
 from copy import deepcopy
 from collections import defaultdict
 from typing import Callable
-from game import Nim, Nimply, Duel
+from game import Nim, Nimply, Duel, NimNode, game_node_mapping
 from minmax import NimNode, game_node_mapping, nim_min_max
 
 
